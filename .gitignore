@@ -7,3 +7,4 @@ build
 .wrangler
 .dev.vars
 .DS_Store
+push.sh
