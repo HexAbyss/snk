@@ -9,6 +9,7 @@ import * as githubAction from "./github-action";
     const userName = githubAction.getInput("github_user_name");
     const githubToken =
       process.env.GITHUB_TOKEN ?? githubAction.getInput("github_token");
+    const contributionScope = githubAction.getInput("contribution_scope") || "all";
 
     const outputsRaw = [
       ...githubAction.getInput("outputs").split("\n"),
@@ -23,7 +24,7 @@ import * as githubAction from "./github-action";
     const outputs = parseOutputsOption(outputsRaw);
 
     const results = await generateSnakeAnimation(
-      { platform: "github", username: userName, githubToken },
+      { platform: "github", username: userName, githubToken, contributionScope },
       outputs,
     );
 

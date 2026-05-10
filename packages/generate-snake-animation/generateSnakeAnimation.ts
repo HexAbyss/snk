@@ -16,6 +16,7 @@ export type Source =
       username: string;
       githubToken: string;
       baseUrl?: string;
+      contributionScope?: "all" | "public" | "private";
     }
   | { platform: "gitlab"; username: string; baseUrl?: string }
   | { platform: "forgejo"; username: string; baseUrl: string };
@@ -32,6 +33,7 @@ export const getUserContribution = async (source: Source) => {
       return getGithubUserContribution(source.username, {
         githubToken: source.githubToken,
         baseUrl: source.baseUrl,
+        contributionScope: source.contributionScope,
       });
     case "gitlab":
       return getGitlabUserContribution(source.username, {

@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## [v0.0.2] - 2026-05-10
+
+- fix(packages): update project files and related changes
+- 4 files changed, 69 insertions(+), 5 deletions(-)
+
 ## [v0.0.1] - 2026-05-10
 
 - fix: update project files and related changes

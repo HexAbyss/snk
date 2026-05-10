@@ -1,3 +1,5 @@
+import { fetchGithubUserContributionHtml } from "./fetchContributionHtml";
+
 /**
  * get the contribution grid from a github user page
  *
@@ -16,7 +18,31 @@
  */
 export const getGithubUserContribution = async (
   userName: string,
-  o: { githubToken: string; baseUrl?: string },
+  o: { githubToken?: string; baseUrl?: string; contributionScope?: "all" | "public" | "private" },
+) => {
+  const contributionScope = normalizeContributionScope(o.contributionScope);
+
+  if (contributionScope === "public") {
+    return getPublicGithubUserContribution(userName);
+  }
+
+  if (!o.githubToken) {
+    throw new Error(`Missing github token for contribution scope \"${contributionScope}\"`);
+  }
+
+  const allContributions = await getAuthenticatedGithubUserContribution(userName, o.githubToken, o.baseUrl);
+  if (contributionScope === "all") {
+    return allContributions;
+  }
+
+  const publicContributions = await getPublicGithubUserContribution(userName);
+  return buildPrivateOnlyContribution(allContributions, publicContributions);
+};
+
+const getAuthenticatedGithubUserContribution = async (
+  userName: string,
+  githubToken: string,
+  baseUrl?: string,
 ) => {
   const query = /* GraphQL */ `
     query ($login: String!) {
@@ -38,13 +64,13 @@ export const getGithubUserContribution = async (
   `;
   const variables = { login: userName };
 
-  const apiUrl = o.baseUrl
-    ? `${o.baseUrl}/api/graphql`
+  const apiUrl = baseUrl
+    ? `${baseUrl}/api/graphql`
     : "https://api.github.com/graphql";
 
   const res = await fetch(apiUrl, {
     headers: {
-      Authorization: `bearer ${o.githubToken}`,
+      Authorization: `bearer ${githubToken}`,
       "Content-Type": "application/json",
       "User-Agent": "me@platane.me",
     },
@@ -76,6 +102,37 @@ export const getGithubUserContribution = async (
           0,
       })),
   );
+};
+
+const getPublicGithubUserContribution = async (userName: string) => {
+  const cells = await fetchGithubUserContributionHtml(userName);
+  return cells.map((cell) => ({ ...cell, count: 0 }));
+};
+
+const buildPrivateOnlyContribution = (
+  allContributions: Awaited<ReturnType<typeof getAuthenticatedGithubUserContribution>>,
+  publicContributions: Awaited<ReturnType<typeof getPublicGithubUserContribution>>,
+) => {
+  const publicByDate = new Map(publicContributions.map((cell) => [cell.date, cell]));
+
+  // GitHub does not expose a per-day private-only calendar directly.
+  // We can only keep days that exist in the authenticated calendar but are absent from the public one.
+  return allContributions.map((cell) => {
+    const publicCell = publicByDate.get(cell.date);
+    if (!publicCell || publicCell.level === 0) {
+      return cell;
+    }
+
+    return { ...cell, count: 0, level: 0 as 0 };
+  });
+};
+
+const normalizeContributionScope = (value?: string) => {
+  if (value === "public" || value === "private" || value === "all") {
+    return value;
+  }
+
+  return "all";
 };
 
 type GraphQLRes = {
